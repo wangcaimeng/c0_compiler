@@ -52,7 +52,6 @@ char ch; //读取的字符
 //语法分析
 
 //符号表项信息；
-bool global = true;
 int expType; //表达式类型
 string name;  //名字
 int kind; //类型
@@ -308,6 +307,7 @@ void addToTable(string name, int kind, float value, int address, int paraNum, in
         mainTable.fIndexList[mainTable.fTotal] = mainTable.index;  //保存该函数起始位置索引
         mainTable.elements[mainTable.index].name = name;
         mainTable.elements[mainTable.index].kind = kind;
+        mainTable.elements[mainTable.index].address=address;
         mainTable.index++;
     }
     else {  //其他
@@ -324,7 +324,7 @@ void addToTable(string name, int kind, float value, int address, int paraNum, in
         mainTable.elements[mainTable.index].name = name;
         mainTable.elements[mainTable.index].kind = kind;
         mainTable.elements[mainTable.index].value = value;
-        mainTable.elements[mainTable.index].address = mainTable.fTotal == 0 ? address + globalMark : mainTable.index - (mainTable.fIndexList[mainTable.fTotal]); //局部变量存相对地址  局部变量地址从1开始 0留给返回地址
+        mainTable.elements[mainTable.index].address = mainTable.fTotal == 0 ? address + globalMark : address - (mainTable.elements[mainTable.fIndexList[mainTable.fTotal]].address); //局部变量存相对地址  局部变量地址从1开始 0留给返回地址
         mainTable.elements[mainTable.index].paraNum = paraNum;
         mainTable.elements[mainTable.index].arrayLen = arrayLen;
         mainTable.index++;
@@ -550,7 +550,6 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
             error(NOTASYMBOL, TOTYPESYM);
         }
     }
-    global=false;
     //开始函数定义部分
     while (symType == INTSYM || symType == FLOATSYM || symType == CHARSYM || symType == VOIDSYM) {
         string funName;
@@ -564,7 +563,8 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                 funName = symValue;  //将函数名及入口
                 index = instrIndex++;//保存ALLOC指令的位置
                 name = symValue;  //填表
-                addToTable(name, FUNCTION, value, 0, 0, 0);
+                address=dataIndex++;
+                addToTable(name, FUNCTION, value, address, 0, 0);
                 addFunInstrIndex(funName, index);//保存函数名及入口
                 getsym();
                 if (symType == '(') {
@@ -582,6 +582,8 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                             if (symType == '}') {
                                 getsym();
                                 genPcode(ALLOC, getFunDataSize(funName), index);
+                                genPcode(LOAD, 0, instrIndex++);//加载返回地址 相对地址0存储返回地址
+                                genPcode(BRA, 0, instrIndex++);
                                 cout << "这是一个函数定义" << endl;
                             }
                             else {
@@ -617,7 +619,8 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                 index = instrIndex++; //保存ALLOC指令的位置
                 name = symValue;  //填表
                 value = 0;
-                addToTable(name, FUNCTION, value, 0, 0, 0);
+                address = dataIndex++;
+                addToTable(name, FUNCTION, value, address, 0, 0);
                 genPcode(BR, index, 0);
                 getsym();
                 if (symType == '(') {
@@ -659,7 +662,8 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                     index = instrIndex++;//保存ALLOC指令的位置
                     name = symValue;  //填表
                     value = 0;
-                    addToTable(name, FUNCTION, value, 0, 0, 0);
+                    address = dataIndex++;
+                    addToTable(name, FUNCTION, value, address, 0, 0);
                     addFunInstrIndex(funName, index);
                     getsym();
                     if (symType == '(') {
@@ -678,6 +682,8 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                                 if (symType == '}') {
                                     getsym();
                                     genPcode(ALLOC, getFunDataSize(funName), index);
+                                    genPcode(LOAD, 0, instrIndex++);//加载返回地址 相对地址0存储返回地址
+                                    genPcode(BRA, 0, instrIndex++);
                                     cout << "这是一个函数定义" << endl;
                                 }
                                 else {
@@ -741,7 +747,7 @@ void constDeclaration() {            // <常量定义> ::=
                     getsym();
                     if (symType == INTNUMBER) {
                         value = numberValue;  //填表
-                        address = 0;
+                        address = dataIndex++;
                         addToTable(name, kind, value, address, 0, 0);
                     }
                     else if (symType == '+' || symType == '-') {
@@ -749,7 +755,7 @@ void constDeclaration() {            // <常量定义> ::=
                         getsym();
                         if (symType == INTNUMBER) {
                             value = tempSymType == '+' ? numberValue : -numberValue;  //填表
-                            address = 0;
+                            address = dataIndex++;
                             addToTable(name, kind, value, address, 0, 0);
                         }
                         else {
@@ -788,7 +794,7 @@ void constDeclaration() {            // <常量定义> ::=
                     getsym();
                     if (symType == FLOATNUMBER) {
                         value = numberValue;  //填表
-                        address = 0;
+                        address = dataIndex++;
                         addToTable(name, kind, value, address, 0, 0);
                     }
                     else {
@@ -822,7 +828,7 @@ void constDeclaration() {            // <常量定义> ::=
                     getsym();
                     if (symType == CHAR) {
                         value = numberValue;  //填表
-                        address = 0;
+                        address = dataIndex++;
                         addToTable(name, kind, value, address, 0, 0);
                     }
                     else {
@@ -864,9 +870,7 @@ void varDeclaration() {  // <变量定义> ::= <类型标识符>(<标识符>|<�
                         if (symType == ']') {
                             value = 0;    //填表
                             address = dataIndex;
-                            if(global){
-                                dataIndex = dataIndex + arrayLen;
-                            }
+                            dataIndex=dataIndex+arrayLen;
                             paraNum = 0;
                             addToTable(name, kind, value, address, paraNum, arrayLen);
                             getsym();
@@ -905,7 +909,8 @@ void parameterList() {    // <参数表> ::= <类型标识符><标识符>{,<类�
             if (symType == IDENT) {
                 name = symValue;     //填表
                 paraNum = 1;
-                addToTable(name, kind, i, 0, paraNum, 0);
+                address=dataIndex++;
+                addToTable(name, kind, i, address, paraNum, 0);
                 i++;
                 getsym();
             }
@@ -924,7 +929,8 @@ void parameterList() {    // <参数表> ::= <类型标识符><标识符>{,<类�
                     name = symValue;     //填表
                     paraNum = 1;
                     i++;
-                    addToTable(name, kind, i, 0, paraNum, 0);
+                    address = dataIndex++;
+                    addToTable(name, kind, i, address, paraNum, 0);
                     getsym();
                 }
                 else {
@@ -1240,7 +1246,6 @@ void returnSentence() {   // <返回语句>   ::=  return[‘(’<表达式>‘)
                 error(RBRACKETMISSING, TOSENTENCEHEADORRBRACE);
             }
         }
-        
     }
     genPcode(LOAD, 0, instrIndex++);//加载返回地址 相对地址0存储返回地址
     genPcode(BRA, 0, instrIndex++);
@@ -1801,10 +1806,10 @@ void interpret() {
                 if (p.operateNum >= globalMark) { //全局变量
                     operateNumStack[++top] = dataArea[(int)p.operateNum - globalMark];
                 }
-                else if (p.instrName == -1) {
+                else if (p.operateNum == -1) {
                     error(0, EXIT);
                 }
-                else if (p.instrName <= -2) {
+                else if (p.operateNum <= -2) {
                     operateNumStack[++top] = switchExp[switchIndex];
                 }
                 else {  //局部变量
@@ -1820,11 +1825,11 @@ void interpret() {
                 if (p.operateNum >= globalMark) { //全局变量
                     dataArea[(int)p.operateNum - globalMark] = operateNumStack[top--];
                 }
-                else if (p.instrName == -1) {
+                else if (p.operateNum == -1) {
                     error(0, EXIT);
                 }
-                else if (p.instrName <= -2) {
-                    switchExp[switchIndex] = operateNumStack[++top];
+                else if (p.operateNum <= -2) {
+                    switchExp[switchIndex] = operateNumStack[top--];
                 }
                 else {  //局部变量
                     dataArea[(int)p.operateNum + baseAddr[ARIndex]] = operateNumStack[top--];
