@@ -53,6 +53,8 @@ char ch; //读取的字符
 
 //符号表项信息；
 int expType; //表达式类型
+int charCount,intCount,floatCount;
+bool isArrIndex = false;
 string name;  //名字
 int kind; //类型
 float value;  //保存常量的值
@@ -156,7 +158,7 @@ int getsym() {
                 if (point) {
                     numAfterPoiont++;
                     if (ch != '0') {
-                        num = num + (ch - '0') / pow(10, numAfterPoiont);  //遇到小数点后
+                        num = num + (ch - '0') / pow(10.0, numAfterPoiont);  //遇到小数点后
                     }
                     
                 }
@@ -263,7 +265,7 @@ int getsym() {
             charNum--;
         }
     }
-    else if (ch == '{' || ch == '}' || ch == '(' || ch == ')' || ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == ';' || ch == ',' || ch == ':' || ch == '[' || ch == ']') {  //{ } ( ) + - * / 单个字符
+    else if (ch == '{' || ch == '}' || ch == '(' || ch == ')'|| ch == '*' || ch == '/' || ch == ';' || ch == ',' || ch == ':' || ch == '[' || ch == ']'||ch=='+'||ch=='-') {  //{ } ( ) + - * / 单个字符
         symType = ch;
     }
     else {
@@ -459,7 +461,6 @@ void findParaNumInTable(int i, string funName) {
             }
         }
     }
-    error(NOTDECLARE, TOSENTENCEHEADORRBRACKET);
 }
 
 int getIdentType(string name,string funName){
@@ -749,8 +750,7 @@ void constDeclaration() {            // <常量定义> ::=
                         value = numberValue;  //填表
                         address = dataIndex++;
                         addToTable(name, kind, value, address, 0, 0);
-                    }
-                    else if (symType == '+' || symType == '-') {
+                    }else if (symType == '+' || symType == '-') {
                         int tempSymType = symType;
                         getsym();
                         if (symType == INTNUMBER) {
@@ -796,6 +796,18 @@ void constDeclaration() {            // <常量定义> ::=
                         value = numberValue;  //填表
                         address = dataIndex++;
                         addToTable(name, kind, value, address, 0, 0);
+                    }else if (symType == '+' || symType == '-') {
+                        int tempSymType = symType;
+                        getsym();
+                        if (symType == FLOATNUMBER) {
+                            value = tempSymType == '+' ? numberValue : -numberValue;  //填表
+                            address = dataIndex++;
+                            addToTable(name, kind, value, address, 0, 0);
+                        }
+                        else {
+                            //ERROR 应为实数
+                            error(WRONGTYPE, CONTINUE);
+                        }
                     }
                     else {
                         //ERROR 应为实数
@@ -1275,7 +1287,23 @@ void writeSentence() {   // <写语句>    ::= printf ‘(’ <字符串>,<表�
                 }
                 else if (symType == ',') {    //printf ‘(’ <字符串>,<表达式> ‘)’
                     getsym();
+                    charCount=0;
+                    intCount=0;
+                    floatCount=0;
                     expression();
+                    if(floatCount==0){
+                        if(intCount==0){
+                            if(charCount>0){
+                                expType=CHAR;
+                            }else{
+                                expType=INTNUMBER;
+                            }
+                        }else{
+                            expType=INTNUMBER;
+                        }
+                    }else{
+                        expType=FLOATNUMBER;
+                    }
                     if (symType == ')') {
                         getsym();
                         if (stringValue == "\"%d\"") {
@@ -1294,6 +1322,7 @@ void writeSentence() {   // <写语句>    ::= printf ‘(’ <字符串>,<表�
                                     genPcode(WRT, CHAR, instrIndex++);
                                 }
                             }
+                            
                             genPcode(WRT, expType, instrIndex++);
                         }
                         cout << "这是一个写语句" << endl;
@@ -1310,7 +1339,23 @@ void writeSentence() {   // <写语句>    ::= printf ‘(’ <字符串>,<表�
                 }
             }
             else {     //printf ‘(’<表达式>‘)’
+                charCount=0;
+                intCount=0;
+                floatCount=0;
                 expression();
+                if(floatCount==0){
+                    if(intCount==0){
+                        if(charCount>0){
+                            expType=CHAR;
+                        }else{
+                            expType=INTNUMBER;
+                        }
+                    }else{
+                        expType=INTNUMBER;
+                    }
+                }else{
+                    expType=FLOATNUMBER;
+                }
                 if (symType == ')') {
                     getsym();
                     genPcode(WRT, expType, instrIndex++);
@@ -1451,7 +1496,6 @@ void valueOfParameterList(string funName) {    // <值参数表>   ::= <表达�
 
 
 void expression() {    // <表达式> ::= [+|-]<项>{<加法运算符><项>}
-    expType = INTNUMBER;
     char tempSymType;
     if (symType == '+' || symType == '-') {
         tempSymType = symType;
@@ -1470,7 +1514,7 @@ void expression() {    // <表达式> ::= [+|-]<项>{<加法运算符><项>}
             tempSymType == '+' ? genPcode(ADD, 0, instrIndex++) : genPcode(SUB, 0, instrIndex++);
         }
     }
-    else if (symType == IDENT || symType == INTNUMBER || symType == FLOATNUMBER || symType == CHAR || symType == '(') {
+    else if (symType == IDENT || symType == INTNUMBER || symType == FLOATNUMBER || symType == CHAR || symType == '('||symType=='+'||symType=='-') {
         term();
         while (symType == '+' || symType == '-') {
             tempSymType = symType;
@@ -1488,7 +1532,7 @@ void expression() {    // <表达式> ::= [+|-]<项>{<加法运算符><项>}
 
 void term() {  // <项> ::= <因子>{<乘法运算符><因子>}
     char tempSymType;
-    if (symType == IDENT || symType == INTNUMBER || symType == FLOATNUMBER || symType == CHAR || symType == '(') {
+    if (symType == IDENT || symType == INTNUMBER || symType == FLOATNUMBER || symType == CHAR || symType == '('||symType=='+'||symType=='-') {
         factor();
         while (symType == '*' || symType == '/') {
             tempSymType = symType;
@@ -1505,23 +1549,45 @@ void term() {  // <项> ::= <因子>{<乘法运算符><因子>}
 
 void factor() {  //因子> ::= <标识符>|<标识符>'[' <表达式>']'|<整数>|<实数>|<字符>|<有返回值函数调用语句>|'('<表达式>')'
     string tempSymValue;
+    int sign = 0;
+    if(symType=='+'||symType=='-'){
+        if(symType=='-'){
+            sign='-';
+            genPcode(LOADI, 0, instrIndex++);
+        }else{
+            sign='+';
+        }
+        getsym();
+    }
     if (symType == IDENT) {  // <标识符>|<标识符>'[' <表达式>']'|<有返回值函数调用语句>
         tempSymValue = symValue;
         int tempSymType = symType;
         int tempCharNum = charNum;
         getsym();
         if (symType == '[') {  // <标识符>'[' <表达式>']'
+            if (!isArrIndex&&(getIdentType(tempSymValue, thisFunName)==VARFLOAT||getIdentType(tempSymValue, thisFunName)==CONSTFLOAT)) {
+                floatCount++;
+            }else if(!isArrIndex&&(getIdentType(tempSymValue, thisFunName)==VARINT||getIdentType(tempSymValue, thisFunName)==CONSTINT)){
+                intCount++;
+            }else if(!isArrIndex&&(getIdentType(tempSymValue, thisFunName)==VARCHAR||getIdentType(tempSymValue, thisFunName)==CONSTCHAR)){
+                charCount++;
+            }
             genPcode(LOADI, searchInTable(tempSymValue, thisFunName), instrIndex++);//加载数组首地址到栈顶
             getsym();
+            isArrIndex = true;
             expression();
+            isArrIndex = false;
             genPcode(ADD, 0, instrIndex++); //首地址加相对地址
             genPcode(LODTOP, 0, instrIndex++);
             if (symType == ']') {
                 getsym();
+                if(sign!=0){
+                    error(WRONGEXPRESSION, TOSENTENCEHEADORMUL);
+                }
                 return;
             }
             else {
-                //ERROR 缺]
+                error(WRONGEXPRESSION, TOSENTENCEHEADORMUL);
                 return;
             }
         }
@@ -1529,11 +1595,18 @@ void factor() {  //因子> ::= <标识符>|<标识符>'[' <表达式>']'|<整数
             symType = tempSymType;
             charNum = tempCharNum;
             functionCallSentence();
+            if(sign!=0){
+                error(WRONGEXPRESSION, TOSENTENCEHEADORMUL);
+            }
             return;
         }
         else {
-            if (getIdentType(tempSymValue, thisFunName)==VARFLOAT&&CONSTFLOAT) {
-                expType=FLOATNUMBER;
+            if (!isArrIndex&&(getIdentType(tempSymValue, thisFunName)==VARFLOAT||getIdentType(tempSymValue, thisFunName)==CONSTFLOAT)) {
+                floatCount++;
+            }else if(!isArrIndex&&(getIdentType(tempSymValue, thisFunName)==VARINT||getIdentType(tempSymValue, thisFunName)==CONSTINT)){
+                intCount++;
+            }else if(!isArrIndex&&(getIdentType(tempSymValue, thisFunName)==VARCHAR||getIdentType(tempSymValue, thisFunName)==CONSTCHAR)){
+                charCount++;
             }
             if (isConst(tempSymValue, thisFunName)) {
                 genPcode(LOADI, getConstValue(tempSymValue, thisFunName), instrIndex++);
@@ -1541,22 +1614,40 @@ void factor() {  //因子> ::= <标识符>|<标识符>'[' <表达式>']'|<整数
             else {
                 genPcode(LOAD, searchInTable(tempSymValue, thisFunName), instrIndex++);
             }
+            if(sign!=0){
+                error(WRONGEXPRESSION, TOSENTENCEHEADORMUL);
+            }
             return;
         }
     }
     else if (symType == INTNUMBER) {
         genPcode(LOADI, numberValue, instrIndex++);
+        if(!isArrIndex){
+            intCount++;
+        }
+        if(sign=='-'){
+            genPcode(SUB, 0, instrIndex++);
+        }
         getsym();
         return;
     }
     else if (symType == FLOATNUMBER) {
-        expType=FLOATNUMBER;
         genPcode(LOADI, numberValue, instrIndex++);
+        if(!isArrIndex){
+            floatCount++;
+        }
+
+        if(sign=='-'){
+            genPcode(SUB, 0, instrIndex++);
+        }
         getsym();
         return;
     }
     else if (symType == CHAR) {
         genPcode(LOADI, numberValue, instrIndex++);
+        if(!isArrIndex){
+            charCount++;
+        }
         getsym();
         return;
     }
@@ -1990,7 +2081,7 @@ int main(int argc, const char * argv[]) {
     char * fileName;
     cout << "请输入要编译的文件的绝对路径:" << endl;
     //cin >> fileName;
-    fileName = "//Users//wangcaimeng//Desktop//14061152_test.txt";
+    fileName = "//Users//wangcaimeng//Desktop//test.c";
     fin.open(fileName);
     if (!fin.is_open()) {
         cout << "文件打开失败" << endl;
