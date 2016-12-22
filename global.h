@@ -119,7 +119,7 @@ using namespace::std;
 #define ALLOC   13  //分配指定长度的空间
 #define JSR     14  //跳转到指定位置并将返回地址压栈
 #define WRT     15  //WRT type  以type类型输出栈顶元素
-#define READ    16  //
+#define READ    16  //READ type
 #define BRA     17  //BR 栈顶地址 并销毁当前运行记录
 
 

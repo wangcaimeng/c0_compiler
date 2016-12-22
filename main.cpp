@@ -37,6 +37,7 @@ int switchExp[MAXCALLNUM]; //存switch的expression的值
 int switchIndex=1;
 float operateNumStack[MAXOPERATENUMNUM]; //操作数栈
 int top = -1;
+bool isError = false;
 
 //词法分析相关
 string word[RESERVEDWORDNUM]; //系统保留字表
@@ -182,7 +183,7 @@ int getsym() {
         a = a + ch;
         
         getch();
-        if (isLetter(ch) ||ch=='_'|| isNum(ch) || ch == '+' || ch == '-' || ch == '*' || ch == '/') {
+        if (0<=ch&&ch<=127) {
             a = a + ch;
             numberValue = ch;
         }
@@ -585,7 +586,7 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                                 genPcode(ALLOC, getFunDataSize(funName), index);
                                 genPcode(LOAD, 0, instrIndex++);//加载返回地址 相对地址0存储返回地址
                                 genPcode(BRA, 0, instrIndex++);
-                                cout << "这是一个函数定义" << endl;
+                              
                             }
                             else {
                                 //ERROR 少}
@@ -634,7 +635,7 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                             if (symType == '}') {
                                 genPcode(ALLOC, getFunDataSize(funName), index);
                                 getsym();
-                                cout << "这是一个函数定义" << endl;
+                            
                             }
                             else {
                                 //ERROR 少}
@@ -685,7 +686,7 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
                                     genPcode(ALLOC, getFunDataSize(funName), index);
                                     genPcode(LOAD, 0, instrIndex++);//加载返回地址 相对地址0存储返回地址
                                     genPcode(BRA, 0, instrIndex++);
-                                    cout << "这是一个函数定义" << endl;
+                                    
                                 }
                                 else {
                                     //ERROR 少}
@@ -714,7 +715,7 @@ void program() {   // <程序> ::= [<常量说明>] {<变量定义>;} {<有返�
             }
         }
     }
-    cout << "这是一个程序" << endl;
+    
     return;
 }
 
@@ -732,7 +733,7 @@ void constStatement() {  // <常量说明> ::= const<常量定义>;{const<常量
             error(SEMICOLONMISSING, TOCONSTOR2);
         }
     }
-    cout << "这是一个常量说明" << endl;
+    
     return;
 }
 
@@ -910,7 +911,7 @@ void varDeclaration() {  // <变量定义> ::= <类型标识符>(<标识符>|<�
             }
         } while (symType == ',');
     }
-    cout << "这是一个变量定义" << endl;
+    
 }
 void parameterList() {    // <参数表> ::= <类型标识符><标识符>{,<类型标识符><标识符>}|<空>
     int i = 0;
@@ -954,7 +955,7 @@ void parameterList() {    // <参数表> ::= <类型标识符><标识符>{,<类�
         }
     }
     addParaNumToTable(i);
-    cout << "这是一个参数表" << endl;
+    
 }
 
 
@@ -972,7 +973,7 @@ void compoundSentence() {    // <复合语句> ::= [<常量说明>] {<变量定�
         }
     }
     sentenceList();
-    cout << "这是一个复合语句" << endl;
+    
 }
 
 void sentenceList() {  // <语句列>   ::= ｛<语句>｝
@@ -989,7 +990,7 @@ void sentenceList() {  // <语句列>   ::= ｛<语句>｝
         }
     }
     
-    cout << "这是一个语句列" << endl;
+    
 }
 
 
@@ -1120,7 +1121,7 @@ void conditionSentence() {  // <条件语句> ::= if '(' <条件> ')'<语句>[el
             error(LBRACKETMISSING, TOSENTENCEHEADORRBRACE);
         }
     }
-    cout << "这是一个条件语句" << endl;
+    
 }
 
 void switchSentence() { // <情况语句>  ::=  switch ‘(’<表达式>‘)’ ‘{’<情况表> ‘}’
@@ -1158,7 +1159,7 @@ void switchSentence() { // <情况语句>  ::=  switch ‘(’<表达式>‘)’
             error(LBRACKETMISSING, TOSENTENCEHEADORRBRACE);
         }
     }
-    cout << "这是一个switch语句" << endl;
+    
 }
 
 void switchList() {    // <情况表>   ::=  <情况子语句>{<情况子语句>}
@@ -1172,7 +1173,7 @@ void switchList() {    // <情况表>   ::=  <情况子语句>{<情况子语句>
         //ERROR 情况表为空
         error(SWITCHLISTMISSING, TOSENTENCEHEADORRBRACE);
     }
-    cout << "这是一个情况表" << endl;
+    
 }
 
 void caseSentence() {    // <情况子语句>  ::=  case<可枚举常量>：<语句>
@@ -1200,7 +1201,7 @@ void caseSentence() {    // <情况子语句>  ::=  case<可枚举常量>：<语
             error(WRONGTYPE, TOCASEORRBRACE);
         }
     }
-    cout << "这是一个情况子语句" << endl;
+    
 }
 void loopSentence() {   // <循环语句>   ::=  while ‘(’<条件>‘)’<语句>
     int startLoopIndex;
@@ -1228,7 +1229,7 @@ void loopSentence() {   // <循环语句>   ::=  while ‘(’<条件>‘)’<�
             error(LBRACKETMISSING, TOSENTENCEHEADORRBRACE);
         }
     }
-    cout << "这是一个循环语句" << endl;
+    
 }
 
 void condition() {    // <条件> ::= <表达式> <关系运算符> <表达式> | <表达式>
@@ -1239,7 +1240,7 @@ void condition() {    // <条件> ::= <表达式> <关系运算符> <表达式> 
         expression();
         genPcode(CMP, opCode, instrIndex++);
     }
-    cout << "这是一个条件" << endl;
+    
     return;
     
 }
@@ -1261,7 +1262,7 @@ void returnSentence() {   // <返回语句>   ::=  return[‘(’<表达式>‘)
     }
     genPcode(LOAD, 0, instrIndex++);//加载返回地址 相对地址0存储返回地址
     genPcode(BRA, 0, instrIndex++);
-    cout << "这是一个返回语句" << endl;
+    
 }
 
 void writeSentence() {   // <写语句>    ::= printf ‘(’ <字符串>,<表达式> ‘)’| printf ‘(’<字符串> ‘)’| printf ‘(’<表达式>‘)’
@@ -1282,7 +1283,7 @@ void writeSentence() {   // <写语句>    ::= printf ‘(’ <字符串>,<表�
                         }
                         
                     }
-                    cout << "这是一个写语句" << endl;
+                    
                     return;
                 }
                 else if (symType == ',') {    //printf ‘(’ <字符串>,<表达式> ‘)’
@@ -1325,7 +1326,7 @@ void writeSentence() {   // <写语句>    ::= printf ‘(’ <字符串>,<表�
                             
                             genPcode(WRT, expType, instrIndex++);
                         }
-                        cout << "这是一个写语句" << endl;
+                        
                         return;
                     }
                     else {
@@ -1359,7 +1360,7 @@ void writeSentence() {   // <写语句>    ::= printf ‘(’ <字符串>,<表�
                 if (symType == ')') {
                     getsym();
                     genPcode(WRT, expType, instrIndex++);
-                    cout << "这是一个写语句" << endl;
+                    
                     return;
                 }
                 else {
@@ -1378,14 +1379,14 @@ void readSentence() {    // <读语句>    ::=  scanf ‘(’<标识符>{,<标�
             getsym();
             if (symType == IDENT) {
                 genPcode(LOADI, searchInTable(symValue, thisFunName), instrIndex++);
-                genPcode(READ, 0, instrIndex++);
+                genPcode(READ, getIdentType(symValue, thisFunName), instrIndex++);
                 getsym();
                 while (symType == ',') {
                     //查表
                     getsym();
                     if (symType == IDENT) {
                         genPcode(LOADI, searchInTable(symValue, thisFunName), instrIndex++);
-                        genPcode(READ, 0, instrIndex++);
+                        genPcode(READ,getIdentType(symValue, thisFunName), instrIndex++);
                         getsym();
                     }
                     else {
@@ -1394,7 +1395,7 @@ void readSentence() {    // <读语句>    ::=  scanf ‘(’<标识符>{,<标�
                 }
                 if (symType == ')') {
                     getsym();
-                    cout << "这是一个读语句" << endl;
+                    
                     return;
                 }
                 else {
@@ -1423,7 +1424,7 @@ void assignSentence() {    // <赋值语句> ::= <标识符> = <表达式>|<标�
             getsym();
             expression();
             genPcode(STO, searchInTable(tempSymValue, thisFunName), instrIndex++);
-            cout << "这是一个赋值语句" << endl;
+            
             return;
         }
         else if (symType == '[') {  // <标识符>'['<表达式>']' = <表达式>    需要判断标识符定义时是不是数组，若是，数组是否越界
@@ -1452,7 +1453,7 @@ void assignSentence() {    // <赋值语句> ::= <标识符> = <表达式>|<标�
             
         }
     }
-    cout << "这是一个赋值语句" << endl;
+    
 }
 
 
@@ -1467,7 +1468,7 @@ void functionCallSentence() {   // <有返回值函数调用语句> ::= <标识�
             if (symType == ')') {
                 getsym();
                 genPcode(JSR, getFunIndex(tempSymValue), instrIndex++);
-                cout << "这是一个函数调用语句" << endl;
+                
                 return;
             }
             else {
@@ -1491,7 +1492,7 @@ void valueOfParameterList(string funName) {    // <值参数表>   ::= <表达�
         }
     }
     findParaNumInTable(i, funName);
-    cout << "这是一个值参数表" << endl;
+    
 }
 
 
@@ -1527,7 +1528,7 @@ void expression() {    // <表达式> ::= [+|-]<项>{<加法运算符><项>}
         //ERROR 非法表达式
         error(WRONGEXPRESSION, TOSENTENCEHEADORRBRACKET);
     }
-    cout << "这是一个表达式" << endl;
+    
 }
 
 void term() {  // <项> ::= <因子>{<乘法运算符><因子>}
@@ -1664,6 +1665,9 @@ void factor() {  //因子> ::= <标识符>|<标识符>'[' <表达式>']'|<整数
             return;
         }
     }
+    else{
+        error(WRONGEXPRESSION, CONTINUE);
+    }
 }
 
 int getFunIndex(string funName) {
@@ -1675,7 +1679,7 @@ int getFunIndex(string funName) {
 }
 
 void printPcode() {
-    char* PcodeFileName = "//Users//wangcaimeng//Desktop/Pcode.txt";
+    string PcodeFileName = "//Users//wangcaimeng//Desktop//Pcode.txt";
     ofstream fout(PcodeFileName);
     for (int i = 0; i<instrIndex; i++) {
         switch (pcodes[i].instrName) {
@@ -1737,6 +1741,9 @@ void printPcode() {
 }
 
 void genPcode(int instrName, float operateNum, int instrIndex) {
+    if(isError){
+        return;
+    }
     pcodes[instrIndex].instrName = instrName;
     pcodes[instrIndex].operateNum = operateNum;
 }
@@ -1744,6 +1751,7 @@ void genPcode(int instrName, float operateNum, int instrIndex) {
 //para:int errorCode    错误类型码
 //para:int handleCode   处理方式码
 void error(int errorCode, int handleCode) {
+    isError = true;
     switch (errorCode) {
         case FILENOTFIND:
             cout << "文件读取失败！" << endl;
@@ -1887,6 +1895,11 @@ void error(int errorCode, int handleCode) {
 
 
 void interpret() {
+    if(isError){
+        cout<<"程序存在错误，不能进行解释执行！"<<endl;
+        return;
+    }
+    cout<<"程序编译成功，开始解释执行Pcode："<<endl;
     int pc = 0; //程序计数器 表示当前执行指令位置
     int ARIndex = 0; //当前活动记录索引
     float a = 0, b = 0;//临时保存运算操作数
@@ -2053,13 +2066,12 @@ void interpret() {
                 pc++;
                 break;
             case READ:   //读入一个变量存到栈顶的地址里
-                char s[MAXLINELEN];
-                scanf("%s", s);
-                if (isLetter(s[0]) && s[1] == 0) {
-                    a = s[0];
-                }
-                else {
-                    a = atof(s);
+                if(p.operateNum==VARCHAR){
+                    char c;
+                    scanf("%c",&c);
+                    a=c;
+                }else if(p.operateNum==VARINT||p.operateNum==VARFLOAT){
+                    scanf("%f",&a);
                 }
                 b = operateNumStack[top--];
                 if (b >= globalMark) {
@@ -2078,7 +2090,7 @@ void interpret() {
 }
 
 int main(int argc, const char * argv[]) {
-    char * fileName;
+    string fileName;
     cout << "请输入要编译的文件的绝对路径:" << endl;
     //cin >> fileName;
     fileName = "//Users//wangcaimeng//Desktop//test.c";
